@@ -1,0 +1,20 @@
+https://cloud.tencent.com/developer/article/2060687	hpa
+percent		百分比
+utilization		利用
+averageutilization	平均使用率
+resource		资源
+endpoint		端点
+controller		控制器
+SessionAffinity	会话亲和性
+period seconds	周期秒
+required		需要
+preferred		较喜欢
+anti		反对
+
+
+
+
+
+
+
+
