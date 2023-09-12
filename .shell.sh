@@ -1,4 +1,6 @@
 #!/bin/bash
-git add A
-git commit -m $1
+cd /root/lijianhui/
+echo `pwd`
+git add -A
+git commit -m "$1"
 git push 
