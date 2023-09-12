@@ -1,0 +1,147 @@
+###开启 API Aggregator，添加这行
+- --enable-aggregator-routing=true
+### 修改每个 API Server 的 kube-apiserver.yaml 配置开启 Aggregator Routing：修改 manifests 配置后 API Server 会自动重启生效。
+cat /etc/kubernetes/manifests/kube-apiserver.yaml
+
+#安装metrics-server /hpa的前提条件
+下载
+wget https://github.com/kubernetes-sigs/metrics-server/releases/download/metrics-server-helm-chart-3.8.2/components.yaml
+修改文件
+...
+  template:
+    metadata:
+      labels:
+        k8s-app: metrics-server
+    spec:
+      containers:
+      - args:
+        - --cert-dir=/tmp
+        - --secure-port=4443
+        - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+        - --kubelet-use-node-status-port
+        - --kubelet-insecure-tls                    #   加上该启动参数，不加可能会报错
+        image: registry.aliyuncs.com/google_containers/metrics-server:v0.6.1   # 镜像地址根据情况修改
+        imagePullPolicy: IfNotPresent
+...
+
+metrics-server pod无法启动，出现日志unable to fully collect metrics: ... x509: cannot validate certificate for because ... it doesn't contain any IP SANs ...
+解决方法：在metrics-server中添加这行
+- --kubelet-insecure-tls #参数跳过证书校验
+
+kubectl apply -f components.yaml
+kubectl get pod -n kube-system | grep metrics-server
+# 查看
+kubectl get pod -n kube-system | grep metrics-server
+# 查看node和pod资源使用情况
+kubectl top nodes
+kubectl top pods
+
+
+
+
+
+
+
+
+
+
+
+
+
+--------------------------------------------
+###hpa配置示例
+--------------------------------------------
+
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web
+spec:
+  minReplicas: 1
+  maxReplicas: 1000
+  metrics:
+  - pods:
+      metric:
+        name: k8s_pod_rate_cpu_core_used_limit
+      target:
+        averageValue: "80"
+        type: AverageValue
+    type: Pods
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web
+  behavior: # 这里是重点
+    scaleDown:
+      stabilizationWindowSeconds: 300 # 需要缩容时，先观察 5 分钟，如果一直持续需要缩容才执行缩容
+      policies:
+      - type: Percent
+        value: 100 # 允许全部缩掉
+        periodSeconds: 15
+    scaleUp:
+      stabilizationWindowSeconds: 0 # 需要扩容时，立即扩容
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15 # 每 15s 最大允许扩容当前 1 倍数量的 Pod
+      - type: Pods
+        value: 4
+        periodSeconds: 15 # 每 15s 最大允许扩容 4 个 Pod
+      selectPolicy: Max # 使用以上两种扩容策略中算出来扩容 Pod 数量最大的
+      
+##################################################################
+#快速扩容
+behavior:
+  scaleUp:
+    policies:
+    - type: Percent
+      value: 900
+      periodSeconds: 15 # 每 15s 最多允许扩容 9 倍于当前副本数
+#快速扩容，缓慢缩容
+behavior:
+  scaleUp:
+    policies:
+    - type: Percent
+      value: 900
+      periodSeconds: 15 # 每 15s 最多允许扩容 9 倍于当前副本数
+  scaleDown:
+    policies:
+    - type: Pods
+      value: 1
+      periodSeconds: 600 # 每 10 分钟最多只允许缩掉 1 个 Pod
+#缓慢扩容
+behavior:
+  scaleUp:
+    policies:
+    - type: Pods
+      value: 1 
+      periodSeconds: 300 # 每 5 分钟最多只允许扩容 1 个 Pod
+#禁止自动缩容
+behavior:
+  scaleDown:
+    selectPolicy: Disabled
+#延长缩容时间窗口
+behavior:
+  scaleDown:
+    stabilizationWindowSeconds: 600 # 等待 10 分钟再开始缩容
+    policies:
+    - type: Pods
+      value: 5 
+      periodSeconds: 600 # 每 10 分钟最多只允许缩掉 5 个 Pod
+#延长扩容时间窗口
+behavior:
+  scaleUp:
+    stabilizationWindowSeconds: 300 # 扩容前等待 5 分钟的时间窗口
+    policies:
+    - type: Pods
+      value: 20 
+      periodSeconds: 60 # 每分钟最多只允许扩容 20 个 Pod
+      
+      
+      
+###apt get apache2-utils
+###yum install httpd -y
+###开始压测,查看扩容状态
+ab -n 100000 -c 800 http://192.168.20.19:30001/
+#-c：并发数
+#-n：总请求数

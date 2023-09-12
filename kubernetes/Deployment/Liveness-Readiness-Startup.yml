@@ -1,0 +1,125 @@
+###Pod探针的监测方式
+
+# startupProbe  启动检查
+----------------------------------
+startupProbe:                     #健康检查方式：[readinessProbe,livenessProbe,StartupProbe]
+  failureThreshold: 3             #检测失败3次表示未就绪
+  httpGet:                        #请求方式
+    path: /ready                  #请求路径
+    port: 8182                    #请求端口
+    scheme: HTTP                  #请求协议
+  periodSeconds: 10               #检测间隔
+  successThreshold: 1             #检查成功为2次表示就绪
+  timeoutSeconds: 1               #检测失败1次表示未就绪
+----------------------------------
+ 
+# livenessProbe 存活检查
+----------------------------------
+livenessProbe:                  #健康检查方式：[readinessProbe,livenessProbe,StartupProbe]
+  failureThreshold: 5           #检测失败5次表示未就绪
+  httpGet:                      #请求方式
+    path: /health               #请求路径
+    port: 8080                  #请求端口
+    scheme: HTTP                #请求协议
+  initialDelaySeconds: 60       #初始化时间
+  periodSeconds: 10             #检测间隔
+  successThreshold: 1           #检查成功为2次表示就绪
+  timeoutSeconds: 5             #检测失败1次表示未就绪
+  terminationGracePeriodSeconds: 60  #宽限时间，不能用于设置就绪态探针，它将被 API 服务器拒绝。
+----------------------------------
+ 
+# readinessProbe  就绪检查
+----------------------------------
+案例1[get方式]：
+readinessProbe:                   #健康检查方式：[readinessProbe,livenessProbe,StartupProbe]
+  failureThreshold: 3             #检测失败3次表示未就绪
+  httpGet:                        #请求方式
+    path: /ready                  #请求路径
+    port: 8181                    #请求端口
+    scheme: HTTP                  #请求协议
+  periodSeconds: 10               #检测间隔
+  successThreshold: 1             #检查成功为2次表示就绪
+  timeoutSeconds: 1               #检测失败1次表示未就绪
+ 
+案例2 [检查文件内容]：
+readinessProbe:                #检查方式
+  exec:                        #使用命令检查
+    command:                   #指令
+    - cat                      #指令
+    - /etc/hosts               #指令
+  initialDelaySeconds: 5       #容器启动后要等待多少秒后存活和就绪探测器才被初始化，默认是 0 秒，最小值是 0。
+  timeoutSeconds: 2            #检测失败1次表示未就绪
+  successThreshold: 3          #检查成功为2次表示就绪
+  failureThreshold: 2          #检测失败重试次数
+  periodSeconds: 5             #检测间隔
+----------------------------------
+
+#配置案例
+----------------------------------
+apiVersion: apps/v1 # 必选，API的版本号
+kind: Deployment       # 必选，类型Pod
+metadata:       # 必选，元数据
+  name: nginx   # 必选，符合RFC 1035规范的Pod名称
+  labels:       # 可选，标签选择器，一般用于过滤和区分Pod
+    app: nginx
+    role: frontend # 可以写多个
+  annotations:  # 可选，注释列表，可以写多个
+    app: nginx
+spec:   # 必选，用于定义容器的详细信息
+  replicas: 1   # 必选，副本数
+  selector:     # 必选，标签选择器
+    matchLabels:
+      app: nginx
+      role: frontend
+  template:     # 必选，定义pod模板
+    metadata:
+      labels:       # 可选，标签选择器，一般用于过滤和区分Pod
+        app: nginx
+        role: frontend # 可以写多个
+    spec:
+      containers:   # 必选，容器列表
+      - name: nginx01 # 必选，符合RFC 1035规范的容器名称
+        image: 192.168.99.1:5000/k8s/nginx:latest    # 必选，容器所用的镜像的地址
+        imagePullPolicy: Always     # 可选，镜像拉取策略
+        command: # 可选，容器启动执行的命令
+        - nginx
+        - -g
+        - "daemon off;"
+        workingDir: /usr/share/nginx/html       # 可选，容器的工作目录
+        ports:  # 可选，容器需要暴露的端口号列表
+        - name: http    # 端口名称
+          containerPort: 80     # 端口号
+          protocol: TCP # 端口协议，默认TCP
+        env:    # 可选，环境变量配置列表
+        - name: TZ      # 变量名
+          value: Asia/Shanghai # 变量的值
+        - name: LANG
+          value: en_US.utf8
+        startupProbe: # 可选，检测容器内进程是否完成启动。注意三种检查方式同时只能使用一种。
+          failureThreshold: 3             #检测失败3次表示未就绪
+          httpGet:      # httpGet检测方式，生产环境建议使用httpGet实现接口级健康检查，健康检查由应用程序提供。
+            path: / # 检查路径
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10               #检测间隔
+          successThreshold: 1             #检查成功为1次表示就绪
+          timeoutSeconds: 1               #检测失败1次表示未就绪
+        livenessProbe: # 可选，检测容器内进程是否完成启动。注意三种检查方式同时只能使用一种。
+          failureThreshold: 3             #检测失败3次表示未就绪
+          httpGet:      # httpGet检测方式，生产环境建议使用httpGet实现接口级健康检查，健康检查由应用程序提供。
+            path: / # 检查路径
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10               #检测间隔
+          successThreshold: 1             #检查成功为1次表示就绪
+          timeoutSeconds: 1               #检测失败1次表示未就绪
+        readinessProbe: # 可选，检测容器内进程是否完成启动。注意三种检查方式同时只能使用一种。
+          failureThreshold: 3             #检测失败3次表示未就绪
+          httpGet:      # httpGet检测方式，生产环境建议使用httpGet实现接口级健康检查，健康检查由应用程序提供。
+            path: / # 检查路径
+            port: 80
+            scheme: HTTP
+          periodSeconds: 10               #检测间隔
+          successThreshold: 1             #检查成功为1次表示就绪
+          timeoutSeconds: 1               #检测失败1次表示未就绪
+      restartPolicy: Always   # 可选，默认为Always

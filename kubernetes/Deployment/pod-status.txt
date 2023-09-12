@@ -1,0 +1,40 @@
+四、Pod启动阶段（相位 phase）
+Pod 创建完之后，一直到持久运行起来，中间有很多步骤，也就有很多出错的可能，因此会有很多不同的状态
+
+一般来说，pod 这个过程包含以下几个步骤：
+
+1.调度到某台 node 上。kubernetes 根据一定的优先级算法选择一台 node 节点将其作为 Pod 运行的 node
+2.拉取镜像
+3.挂载存储配置等
+4.运行起来。如果有健康检查，会根据检查的结果来设置其状态
+phase 的可能状态有：
+
+1.Pending：表示APIServer创建了Pod资源对象并已经存入了etcd中，但是它并未被调度完成（比如还没有调度到某台node上），或者仍然处于从仓库下载镜像的过程中
+
+2.Running：Pod已经被调度到某节点之上，并且Pod中所有容器都已经被kubelet创建。至少有一个容器正在运行，或者正处于启动或者重启状态（也就是说Running状态下的Pod不一定能被正常访问）
+
+3.Succeeded：有些pod不是长久运行的，比如job、cronjob，一段时间后Pod中的所有容器都被成功终止，并且不会再重启。需要反馈任务执行的结果
+
+4.Failed：Pod中的所有容器都已终止了，并且至少有一个容器是因为失败终止。也就是说，容器以非0状态退出或者被系统终止，比如 command 写的有问题
+
+5.Unknown：表示无法读取 Pod 状态，通常是 kube-controller-manager 无法与 Pod 通信
+
+五、故障排除步骤
+查看Pod事件
+
+kubectl describe TYPE NAME_PREFIX
+查看Pod日志（Failed状态下）
+
+kubectl logs <POD_NAME> [-c Container_NAME]
+进入Pod（状态为running，但是服务没有提供）
+
+kubectl exec –it <POD_NAME> bash
+查看集群信息
+
+kubectl get nodes
+发现集群状态正常
+
+kubectl cluster-info
+查看kubelet日志发现
+
+journalctl -xefu kubelet

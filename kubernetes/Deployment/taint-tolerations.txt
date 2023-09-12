@@ -1,0 +1,43 @@
+#给节点添加污点
+kubectl taint nodes node1 k1=v1:NoSchedule
+#给节点移除污点
+kubectl taint nodes node1 k1=v1:NoSchedule-
+#给pod设置容忍
+spec:
+ tolerations: #设置容忍性
+ - key: k1 
+   value: v1
+   effect: NoSchedule
+
+#设置容忍两个特例
+1.当不指定key值时，表示容忍所有的污点key：
+tolerations:
+- operator: "Exists"
+2.当不指定effect值时，表示容忍所有的污点作用：
+tolerations:
+- key: "key"
+operator: "Exists"
+
+
+#如果某个 Node 更新升级系统组件，为了防止业务长时间中断，可以先在该 Node 设置 NoExecute 污点，把该 Node 上的 Pod 都驱逐出去
+kubectl taint node node01 check=mycheck:NoExecute
+
+#此时如果别的 Node 资源不够用，可临时给 Master 设置 PreferNoSchedule 污点，让 Pod 可在 Master 上临时创建
+kubectl taint node master node-role.kubernetes.io/master=:PreferNoSchedule
+
+#待所有 Node 的更新操作都完成后，再去除污点
+kubectl taint node node01 check=mycheck:NoExecute-
+
+
+
+###警戒和转移###
+#将 Node 标记为不可调度的状态，这样就不会让新创建的 Pod 在此 Node 上运行
+kubectl cordon  node1    #该node将会变为SchedulingDisabled状态
+
+#kubectl drain 可以让 Node 节点开始释放所有 pod，并且不接收新的 pod 进程。drain 本意排水，意思是将出问题的 Node 下的 Pod 转移到其它 Node 下运行
+kubectl drain <NODE_NAME> --ignore-daemonsets --delete-local-data --force
+
+
+
+
+

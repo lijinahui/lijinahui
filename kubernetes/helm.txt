@@ -1,0 +1,104 @@
+#docker ps | grep paas-web
+#docker inspect --format "{{ .State.Pid }}"  d3c24a612b88
+#nsenter -t 30749-n ifconfig
+
+
+
+https://blog.csdn.net/weixin_40150775/article/details/127347423
+
+
+###helm常用命令###
+-----------------------------------
+helm version        //查看helm版本信息
+helm list               /查看当前安装的Chart包
+helm search mysql         //查看与mysql相关的chart包
+helm fetch stable/mysql            //将mysql软件包下载到本地
+helm inspect stable/mysql       //查看该软件包的详细信息
+helm install stable/mysql -n mysql        //安装指定的mysql软件包，并命名为mysql
+helm status mysql                 //查看mysql的状态信息
+helm delete --purge mysql       //删除mysql，并将本地的缓存也进行删除
+helm repo add stable https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts //添加阿里云的repo源
+helm repo update              //更新repo仓库资源
+helm create helm_charts       //创建一个chart，名称为helm_charts
+cd helm_charts/ && helm lint       //测试charts语法
+helm package helm_charts           //打包charts
+helm template helm_charts-0.1.0.tgz       //查看该软件包生成的yaml文件
+-----------------------------------
+
+
+
+
+###helm
+#二进制安装
+wget https://get.helm.sh/helm-v3.1.2-linux-amd64.tar.gz
+tar -zxvf helm-v3.1.2-linux-amd64.tar.gz
+cd linux-amd64
+mv helm /usr/local/bin/
+helm --help
+
+#脚本安装
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+chmod 700 get_helm.sh
+./get_helm.sh
+
+#安装helm push 插件
+# 安装 helm push 插件
+helm plugin install https://github.com/chartmuseum/helm-push.git
+
+# 从官网下载一个 consul
+helm search repo consul
+helm pull az-stable/consul
+
+# 添加本地仓库到 helm repo，看下仓库内容
+helm repo add localrepo http://192.168.2.19:8080
+helm search repo localrepo
+
+# helm push 推送 postgres
+helm push consul-7.1.3.tgz localrepo
+
+
+
+###chart使用
+chart搜索
+helm search repo nginx
+chart下载
+helm pull google/nginx-ingress
+chart自建
+helm create mychart
+chart打包
+helm package mychart
+
+
+###release
+#查看
+helm ls
+#安装
+helm search repo nginx-ingress
+helm install mynginx-ingress google/nginx-ingress
+#更新
+helm upgrade --set controller.hostNetwork=true \
+mynginx-ingress google/nginx-ingress
+#基于文件更新
+helm upgrade mynginx-ingress nginx-ingress -f nginx-ingress/values.yaml
+#查看更新后的值
+helm get values mynginx-ingress
+#版本
+helm history mynginx-ingress
+#回滚
+helm rollback mynginx-ingress 1
+#卸载
+helm uninstall mynginx-ingress
+
+
+
+
+###创建自己的chart
+1、创建自己的chart
+快速创建模板,helm create my-charts,修改对应内容
+打包,然后拷贝至repository的目录,然后执行更新index操作. helm package
+安装,helm install . 或 helm install my-charts.tgz
+验证charts格式,helm lint
+查看charts文件内容. helm inspect chart my-charts
+查看value文件内容. helm inspect values my-charts
+查看charts目录下文件内容. helm inspect my-charts
+查看charts模板渲染后k8s的yaml,helm template my-charts -f configfile --set a=b

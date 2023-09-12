@@ -1,0 +1,28 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpservice-deployment
+spec:
+  #设置可保存的记录版本数
+  revisionHistoryLimit: 10
+  replicas: 5
+  selector:
+    matchLabels:
+      run: httpservice
+  strategy:
+    rollingUpdate:
+      #指定更新时最大扩展的pod数
+      maxSurge: 2
+      #指定可接受的不可用pod数
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        run: httpservice
+    spec:
+      containers:
+        - name: http-service
+          image: httpd:2.4.33
+          ports:
+            - containerPort: 80

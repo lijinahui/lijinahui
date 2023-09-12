@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc
+  namespace: test
+  labels:
+    app: nfs-pvc
+spec:
+  accessModes: #指定访问类型
+  - ReadWriteOnce
+  volumeMode: Filesystem #指定卷类型
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: nfs-storage #指定创建的存储类的名字

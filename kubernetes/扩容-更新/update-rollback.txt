@@ -1,0 +1,42 @@
+#副本数
+kubeclt scale sts <StatefulSet名称> --replicas=<副本数>
+kubectl patch sts <StatefulSet名称> -p '{"spec":{"replicas":<副本数>}}'
+
+#查看时段日志
+kubectl logs <pod-name> --since=1h
+kubectl logs <pod-name> --since-time="2023-06-01T00:00:00Z"
+
+------------------------------
+###滚动更新###
+------------------------------
+#创建初始demo#有回滚需求的话，一定要在执行kubectl apply时加上 --record参数
+kubectl apply -f demo.yml --record
+
+#查看replicaset和deployment状态
+kubectl get replicaset -o wide
+kubectl get deployments -o wide
+
+#查看pod状态
+kubectl get pod -o wide
+
+#更新yaml再次创建demo
+kubectl apply -f demo2.yml --record
+
+#具体替换过程
+kubectl describe deployments httpservice-deployment
+
+
+------------------------------
+###版本回滚###
+------------------------------
+#查看历史版本
+kubectl rollout history deployment httpservice-deployment
+
+#查看replicaset
+kubectl get rs -o wide
+
+#回滚到某个版本，指定revision
+kubectl rollout undo deployment httpservice-deployment --to-revision=1
+
+
+

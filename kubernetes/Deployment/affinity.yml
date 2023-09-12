@@ -1,0 +1,126 @@
+#kubernetes(k8s)硬亲和性NotIn
+#####===>其实这个脚本就是告诉k8s，生成pod的时候不要生成到node2.hiibm.com这台主机上。
+#####===>至于参数kubeernetes.io/hostname是什么意思？可以通过命令kubectl get node --show-labels看到
+apiVersion: v1
+kind: Pod
+metadata:
+  name: affinity
+  labels:
+    app: node-affinity-pod
+spec:
+  containers:
+  - name: with-node-affinity
+    image: harbor.hiibm.com/public/xnginx:v1.5.20200306       #===>事先随便准备个镜像，也可以不用私有仓库
+  affinity:             #===>亲和性参数
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/hostname        #===>参数：取pod的主机名
+            operator: NotIn                    #===>条件：不包含
+            values:
+            - node2.hiibm.com                  #===>值：node2.hiibm.com
+
+
+
+###kubernetes(k8s)硬亲和性In
+[root@master qinhe]# cat a2-affinity-pod-in.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: affinity
+  labels:
+    app: node-affinity-pod
+spec:
+  containers:
+  - name: with-node-affinity
+    image: harbor.hiibm.com/public/xnginx:v1.5.20200306
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/hostname
+            operator: In
+            values:
+            - node2.hiibm.com
+
+
+
+###kubernetes(k8s)软亲和性In
+#==>prefrred是软亲和性（ required是硬亲和性），本例的意思是，期望pod建立在node3节点服务器上，注意是“期望”字眼，不是必须哈，即如果node3故障了或者不存在，那么可以将pod建在其他任意可用节点上。（而上面第四个例子的硬亲和性in是必须满足，否则就不创建）
+apiVersion: v1
+kind: Pod                       #==>类型Pod
+metadata:
+  name: affinity
+  labels:
+    app: node-affinity-pod
+spec:
+  containers:
+  - name: with-node-affinity                     #==>容器名
+    image: harbor.hiibm.com/public/xnginx:v1.5.20200306           #==>镜像
+  affinity:                                      #==>亲和性
+    nodeAffinity:                                #==>node类型的亲和性
+      preferredDuringSchedulingIgnoredDuringExecution:            #==>软亲和性
+      - weight: 1                                #==>亲和性权重1,（可以有多个亲和性条件，权重越大的就越优先）
+        preference:
+          matchExpressions:
+          - key: kubernetes.io/hostname          #==>亲和性匹配主机名
+            operator: In                         #==>亲和性条件In包含
+            values:
+            - node3.hiibm.com                    #==>亲和性条件是主机名需是node3.hiibm.com
+
+
+
+###kubernetes(k8s)Pod亲和性(podAffinit)
+#podAffinity: ------------>pod亲和性
+#requiredDuringSchedulingIgnoredDuringExecution:-------------->硬亲和性
+#- labelSelector:------->亲和条件用标签选择器
+#- key: app------->亲和性匹配的key是app
+#operator: In-------->亲和条件是包含
+#- xnode1------->亲和条件app的值必须是xnode1
+#topologyKey: kubernetes.io/hostname ------->还有个条件必须和已有的即将匹配的那个pod在一个主机里（kubernetes.io/hostname是主机名的意思）
+apiVersion: v1
+kind: Pod
+metadata:
+  name: xpod7node1
+  labels:
+    app: xpod7node1
+spec:
+  containers:
+  - name: xpod7node1
+    image: harbor.hiibm.com/public/xnginx:v1.5.20200306
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - xnode1
+        topologyKey: kubernetes.io/hostname
+
+
+
+#kubernetes(k8s)Pod反亲和性(podAnitAffinit)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: xpod7node1
+  labels:
+    app: xpod7node1
+spec:
+  containers:
+  - name: xpod7node1
+    image: harbor.hiibm.com/public/xnginx:v1.5.20200306
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - xnode1
+        topologyKey: kubernetes.io/hostname
